@@ -34,6 +34,9 @@ def MigrateImports(content):
   content_new = re.sub('org.testng.annotations.BeforeClass;',
                        'org.junit.BeforeClass;', content_new)
 
+  content_new = re.sub('org.testng.annotations.AfterMethod',
+                       'org.junit.After', content_new)
+
   content_new = re.sub(
       'import org.testng.annotations.DataProvider;',
       '''import com.tngtech.java.junit.dataprovider.DataProvider;
@@ -41,8 +44,18 @@ import com.tngtech.java.junit.dataprovider.DataProviderRunner;
 import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import org.junit.runner.RunWith;''', content_new)
 
+  content_new = re.sub('org.testng.AssertJUnit',
+                       'org.junit.Assert', content_new)
+
+  content_new = re.sub('org.testng.Assert',
+                       'org.junit.Assert', content_new)
+
+  # this forces @Guice annotation error, but it's needed for Guice.createInjector
+  content_new = re.sub('org.testng.annotations.Guice;',
+                       'com.google.inject.Guice;\nimport com.google.inject.Injector;', content_new)
+
   # for remaining imports such as assertEquals
-  content_new = re.sub('testng', 'junit', content_new)
+  #content_new = re.sub('testng', 'junit', content_new)
 
   return content_new
 
@@ -123,37 +136,58 @@ def MigrateAsserts(content):
   # TestNG has overloads for assert(True|False|NotNull|Same) taking two
   # parameters: condition, message. JUnit also has these overloads but takes
   # parameters: message, condition.
-  assert_conditional_regex = re.compile(
-      r'assert(True|False|NotNull|Same)\((.*), (.*)\);')
-  content_new = assert_conditional_regex.sub('assert\\1(\\3, \\2);',
-                                             content_new)
+  # assert_conditional_regex = re.compile(
+  #     r'assert(True|False|NotNull|Same)\((.*), (.*)\);')
+  # content_new = assert_conditional_regex.sub('assert\\1(\\3, \\2);',
+  #                                            content_new)
 
   return content_new
 
+def MigrateBuck(buck_module):
+    buck_file = buck_module + "/BUCK"
+    if os.path.isfile(buck_file):
+        with open(buck_file, 'r') as f_in:
+            content = f_in.read()
+            if 'junit' not in content:
+                print('Converting ', buck_file)
+                content = re.sub('deps = DEPS \\+ TEST_DEPS,',
+                                 'deps = DEPS + TEST_DEPS,\n\ttest_type = "junit",', content)
+                with open(buck_file, 'w') as fn:
+                    fn.write(content)
+
+
+def MigrateTestFiles(test_dir):
+    test_files = []
+    for path, dir, files in os.walk(test_dir):
+        for file in files:
+            if file.endswith('Test.java'):
+                test_files.append(os.path.join(path, file))
+
+    for file_name in test_files:
+        with open(file_name, 'r') as f:
+            print("Converting ", file_name)
+            content = f.read()
+            content_new = MigrateImports(content)
+            content_new = MigrateAnnotations(content_new)
+            content_new = MigrateDataProviders(content_new)
+            content_new = MigrateExceptions(content_new)
+            content_new = MigrateAsserts(content_new)
+            with open(file_name, 'w') as fn:
+                fn.write(content_new)
+
 
 def main():
-  directory_to_migrate = sys.argv[1]
-  directory_contents = os.listdir(directory_to_migrate)
-  if directory_contents is None:
+  if len(sys.argv) == 1:
     print('usage: testng2junit.py <directory_to_migrate>')
     sys.exit(1)
-  full_paths = [
-      os.path.join(directory_to_migrate, x) for x in directory_contents
-  ]
-  files = [x for x in full_paths if os.path.isfile(x)]
-  for file_name in files:
-    if not file_name.endswith('java'):
-      continue
-    with open(file_name, 'r') as f:
-      content = f.read()
-      content_new = MigrateImports(content)
-      content_new = MigrateAnnotations(content_new)
-      content_new = MigrateDataProviders(content_new)
-      content_new = MigrateExceptions(content_new)
-      content_new = MigrateAsserts(content_new)
-      with open(file_name, 'w') as fn:
-        fn.write(content_new)
 
+  buck_module = sys.argv[1]
+  test_dir = buck_module
+  if 'src/test' not in buck_module:
+      test_dir = buck_module + '/src/test'
+      MigrateBuck(buck_module)
+
+  MigrateTestFiles(test_dir)
 
 if __name__ == '__main__':
   sys.exit(main())
