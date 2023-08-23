@@ -54,6 +54,19 @@ import org.junit.runner.RunWith;''', content_new)
   content_new = re.sub('org.testng.annotations.Guice;',
                        'com.google.inject.Guice;\nimport com.google.inject.Injector;', content_new)
 
+
+  # clean up junit4 warnings that junit4 tests should not start with void test*.
+  content_new = re.sub('void test', 'void verify', content_new)
+
+
+  # migrate NullChecking*TestBase
+  content_new = re.sub('NullCheckingEnumTestBase', 'NullCheckingEnumJunitTestBase', content_new)
+  content_new = re.sub('NullCheckingInstanceTestBase', 'NullCheckingInstanceJunitTestBase', content_new)
+
+  # Migrate AbstractJerseyTestNG to AbstractJerseyJUnit
+  content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
+
+
   # for remaining imports such as assertEquals
   #content_new = re.sub('testng', 'junit', content_new)
 
@@ -84,20 +97,22 @@ def MigrateDataProviders(content):
   data_provider_test_regex = re.compile(
       r'@Test\(dataProvider\s*=\s*(".*"),?\s?(.*)?\)')
   content_new = data_provider_test_regex.sub(
-      '@Test(\\2)\n    @UseDataProvider(\\1)', content)
+      '@Test(\\2)\n  @UseDataProvider(\\1)', content)
 
   for tup in data_provider_rename_tuples:
     content_new = re.sub(tup[0], '"' + tup[1] + '"', content_new)
 
   content_new = re.sub('@DataProvider.*', '@DataProvider', content_new)
 
-  if 'DataProvider' in content_new:
+  content_new = re.sub('public final class', 'public class', content_new)
+
+  if 'DataProvider' in content_new and '@RunWith(DataProviderRunner.class)' not in content_new:
     content_new = re.sub('public class',
                          '@RunWith(DataProviderRunner.class)\npublic class',
                          content_new)
 
   # In JUnit data providers have to be public and static.
-  object_array_provider_regex = re.compile(r'Object\[\]\[\] (.*)\(\)')
+  object_array_provider_regex = re.compile(r'public Object\[\]\[\] (.*)\(\)')
   content_new = object_array_provider_regex.sub(
       'public static Object[][] \\1()', content_new)
 
