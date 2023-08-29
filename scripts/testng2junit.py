@@ -21,10 +21,10 @@ Usage:
 
 import os
 import sys
-import regex as re
+import re
 
 
-def MigrateImports(content):
+def migrate_imports(content):
   """Updates import statements from TestNG to JUnit."""
   content_new = re.sub('org.testng.annotations.Test', 'org.junit.Test', content)
 
@@ -51,8 +51,9 @@ import org.junit.runner.RunWith;''', content_new)
                        'org.junit.Assert', content_new)
 
   # this forces @Guice annotation error, but it's needed for Guice.createInjector
-  content_new = re.sub('org.testng.annotations.Guice;',
-                       'com.google.inject.Guice;\nimport com.google.inject.Injector;', content_new)
+  content_new = re.sub('import org.testng.annotations.Guice;',
+                       '''import com.google.inject.Guice;
+import com.google.inject.Injector;''', content_new)
 
 
   # clean up junit4 warnings that junit4 tests should not start with void test*.
@@ -67,13 +68,10 @@ import org.junit.runner.RunWith;''', content_new)
   content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
 
 
-  # for remaining imports such as assertEquals
-  #content_new = re.sub('testng', 'junit', content_new)
-
   return content_new
 
 
-def MigrateAnnotations(content):
+def migrate_testng_annotations(content):
   content_new = re.sub('@Test\npublic class', 'public class', content)
 
   content_new = re.sub('@BeforeMethod', '@Before', content_new)
@@ -81,7 +79,7 @@ def MigrateAnnotations(content):
   return content_new
 
 
-def MigrateDataProviders(content):
+def migrate_data_providers(content):
   """TestNG allows a DataProvider to be renamed."""
   # Make a list of tuples mapping the
   # new name to original name.
@@ -119,7 +117,7 @@ def MigrateDataProviders(content):
   return content_new
 
 
-def MigrateExceptions(content):
+def migrate_exceptions(content):
   content_new = re.sub('expectedExceptions', 'expected', content)
 
   exception_patt = re.compile(r'expected\s?=\s?{(.*)}')
@@ -128,7 +126,7 @@ def MigrateExceptions(content):
   return content_new
 
 
-def MigrateAsserts(content):
+def migrate_asserts(content):
   """Converts TestNG assertions to JUnit."""
   # TestNG has an overload for assertEquals that takes parameters:
   # obj1, obj2, message. JUnit also has this overload but takes parameters:
@@ -158,7 +156,106 @@ def MigrateAsserts(content):
 
   return content_new
 
-def MigrateBuck(buck_module):
+"""
+This replaces the following pattern
+
+@Guice(modules = SomeModule.class)
+public class SomeTest {
+
+  @Before
+  public void someTest() {
+  
+  }
+}
+
+..... with .....
+
+public class SomeTest {
+
+  private final Injector injector = Guice.createInjector(new SomeModule());
+
+  @Before
+  public void someTest() {
+    injector.injectMembers(this);  
+  }
+}
+"""
+def migrate_guice_annotation(content):
+    if '@Guice' not in content:
+        return content
+
+    injector_line = replace_guice_module_with_injector(content)
+    print('line: ', injector_line)
+
+    # rewrite the content for simplicity instead of regexp
+    new_content = []
+    content_iter = iter(content.split('\n'))
+    for line in content_iter:
+        # remove all the lines starting with @Guice(....)
+        if '@Guice' in line:
+            while ')' not in line:
+                # skip the next line too since this might span across multiple lines
+                next(content_iter)
+            continue
+
+        # handle insertion of injector
+        if 'public class' in line:
+            new_content.append(line)
+
+            #inject injector after public class SomeClass {
+            insert_line_after_method(new_content, content_iter, injector_line)
+            continue
+
+        # handle insertion of injectMember
+        #  @Before
+        #   public void beforeMethod() {
+        #   ....insert here....
+        if '@Before' in line:
+            new_content.append(line)
+            # this should be the line of the method and keep adding the line until we get {
+            # insert injectMember as the first line below the below method.
+            insert_line_after_method(new_content, content_iter, '    injector.injectMembers(this);')
+            continue
+
+        new_content.append(line)
+
+    return '\n'.join(new_content)
+
+
+def replace_guice_module_with_injector(content):
+    if '@Guice' not in content:
+        raise Exception("@Guice is expected")
+
+    modules_regex = re.compile(
+        r'@Guice\(modules\s*=\s*\{?([^}\n]+)\}?\)')
+    module_matches = re.findall(modules_regex, content)
+    print("module_matches: ", module_matches)
+
+    if not module_matches:
+        raise Exception("Cannot extract @Guice modules. Double check the regexp.")
+
+    module_line = module_matches[0].split(',')
+    modules = []
+    for m in module_line:
+        new_module = re.sub(r'^', 'new ', m.strip())
+        new_module = re.sub('\.class', '()', new_module)
+        modules.append(new_module)
+
+    return '\n  private final Injector injector = Guice.createInjector({});'\
+        .format(", ".join(["{}"] * len(modules)).format(*modules))
+
+
+def insert_line_after_method(contents, content_iter, new_line):
+    method_line = next(content_iter)
+    while '{' not in method_line:
+        contents.append(method_line)
+        method_line = next(content_iter)
+
+    contents.append(method_line)
+    contents.append(new_line)
+
+
+def migrate_buck(buck_module):
     buck_file = buck_module + "/BUCK"
     if os.path.isfile(buck_file):
         with open(buck_file, 'r') as f_in:
@@ -171,7 +268,7 @@ def MigrateBuck(buck_module):
                     fn.write(content)
 
 
-def MigrateTestFiles(test_dir):
+def migrate_tests(test_dir):
     test_files = []
     for path, dir, files in os.walk(test_dir):
         for file in files:
@@ -182,11 +279,12 @@ def MigrateTestFiles(test_dir):
         with open(file_name, 'r') as f:
             print("Converting ", file_name)
             content = f.read()
-            content_new = MigrateImports(content)
-            content_new = MigrateAnnotations(content_new)
-            content_new = MigrateDataProviders(content_new)
-            content_new = MigrateExceptions(content_new)
-            content_new = MigrateAsserts(content_new)
+            content_new = migrate_imports(content)
+            content_new = migrate_testng_annotations(content_new)
+            content_new = migrate_data_providers(content_new)
+            content_new = migrate_guice_annotation(content_new)
+            content_new = migrate_exceptions(content_new)
+            content_new = migrate_asserts(content_new)
             with open(file_name, 'w') as fn:
                 fn.write(content_new)
 
@@ -200,9 +298,9 @@ def main():
   test_dir = buck_module
   if 'src/test' not in buck_module:
       test_dir = buck_module + '/src/test'
-      MigrateBuck(buck_module)
+      migrate_buck(buck_module)
 
-  MigrateTestFiles(test_dir)
+  migrate_tests(test_dir)
 
 if __name__ == '__main__':
   sys.exit(main())
