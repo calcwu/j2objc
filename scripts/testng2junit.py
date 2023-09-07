@@ -63,6 +63,7 @@ import com.google.inject.Injector;''', content_new)
   # migrate NullChecking*TestBase
   content_new = re.sub('NullCheckingEnumTestBase', 'NullCheckingEnumJunitTestBase', content_new)
   content_new = re.sub('NullCheckingInstanceTestBase', 'NullCheckingInstanceJunitTestBase', content_new)
+  content_new = re.sub('NullCheckingBuilderTestBase', 'NullCheckingBuilderJunitTestBase', content_new)
 
   # Migrate AbstractJerseyTestNG to AbstractJerseyJUnit
   content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
@@ -75,6 +76,22 @@ def migrate_testng_annotations(content):
   content_new = re.sub('@Test\npublic class', 'public class', content)
 
   content_new = re.sub('@BeforeMethod', '@Before', content_new)
+
+  content_new = re.sub('@BeforeClass', '@Before', content_new)
+
+  content_new = re.sub('@AfterMethod', '@After', content_new)
+
+  if '@After' in content_new:
+      content_iter = iter(content_new.split('\n'))
+      content_list = []
+      for line in content_iter:
+          content_list.append(line)
+          if '@After' in line:
+              line = next(content_iter)
+              line = re.sub('private void', 'public void', line)
+              content_list.append(line)
+
+      return '\n'.join(content_list)
 
   return content_new
 
@@ -96,6 +113,9 @@ def migrate_data_providers(content):
       r'@Test\(dataProvider\s*=\s*(".*"),?\s?(.*)?\)')
   content_new = data_provider_test_regex.sub(
       '@Test(\\2)\n  @UseDataProvider(\\1)', content)
+
+  # clean up @Test() to @Test
+  content_new = re.sub('@Test\(\)', '@Test', content_new)
 
   for tup in data_provider_rename_tuples:
     content_new = re.sub(tup[0], '"' + tup[1] + '"', content_new)
@@ -185,7 +205,7 @@ def migrate_guice_annotation(content):
         return content
 
     injector_line = replace_guice_module_with_injector(content)
-    print('line: ', injector_line)
+    print('Guice injector: ', injector_line)
 
     # rewrite the content for simplicity instead of regexp
     new_content = []
@@ -202,8 +222,12 @@ def migrate_guice_annotation(content):
         if 'public class' in line:
             new_content.append(line)
 
-            #inject injector after public class SomeClass {
-            insert_line_after_method(new_content, content_iter, injector_line)
+            if '{' in line:
+                new_content.append(injector_line)
+            else:
+                #inject injector after public class SomeClass {
+                insert_line_after_method(new_content, content_iter, injector_line)
+
             continue
 
         # handle insertion of injectMember
@@ -221,6 +245,85 @@ def migrate_guice_annotation(content):
 
     return '\n'.join(new_content)
 
+
+"""
+This replaces the following pattern
+
+private final SomeServiceA serviceA;
+
+private final SomeServiceB serviceB;
+
+@Inject
+public SomeClass(SomeServiceA serviceA, SomeServiceB serviceB) {
+    this.serviceA = serviceA;
+    this.serviceB = serviceB;
+}
+
+..... with .....
+
+@Inject
+private SomeServiceA serviceA;
+
+@Inject
+private SomeServiceB serviceB;
+"""
+def migrate_inject_constructor(class_name, content):
+    if '@Inject' not in content:
+        return content
+
+    # extract constructor arguments
+    injected_arguments = extract_constructor_arguments(class_name, content)
+
+    if injected_arguments:
+        content_iter = iter(content.split('\n'))
+        content_new = []
+        parsing = True
+        for line in content_iter:
+            if parsing:
+                for argument in injected_arguments:
+                    if argument + ';' in line:
+                        content_new.append('  @Inject')
+                        line = re.sub('final ', '', line)
+
+                # remove constructor
+                if '@Inject' in line:
+                    line = next(content_iter)
+                    # match any constructor variation
+                    match_constructor = re.search(r'\b(public\s+)?' + class_name + '\s*\(', line)
+                    if match_constructor:
+                        # next skipping while there is a }
+                        while '}' not in line:
+                            line = next(content_iter)
+
+                        parsing = False
+                        continue
+
+            content_new.append(line)
+
+        return '\n'.join(content_new)
+    return content
+
+def extract_constructor_arguments(class_name, content):
+    content_iter = iter(content.split('\n'))
+    lines = []
+    for line in content_iter:
+        if class_name + '(' in line:
+            lines.append(line)
+            while ')' not in line:
+                line = next(content_iter)
+                lines.append(line)
+
+        if lines:
+            break
+
+    # combine everything to oneline
+    arguments = []
+    match = re.search('\((.*?)\)', ''.join(lines))
+    if match:
+        arguments = [a.strip() for a in match.group(1).strip().split(',')]
+        print('injected arguments: ', arguments)
+
+    return arguments
 
 def replace_guice_module_with_injector(content):
     if '@Guice' not in content:
@@ -283,10 +386,17 @@ def migrate_tests(test_dir):
             content_new = migrate_testng_annotations(content_new)
             content_new = migrate_data_providers(content_new)
             content_new = migrate_guice_annotation(content_new)
+            content_new = migrate_inject_constructor(extrac_class_name(file_name), content_new)
             content_new = migrate_exceptions(content_new)
             content_new = migrate_asserts(content_new)
             with open(file_name, 'w') as fn:
                 fn.write(content_new)
+
+
+def extrac_class_name(file):
+    b = file.rfind('/')
+    e = file.rfind('.java')
+    return file[b+1:e]
 
 
 def main():
