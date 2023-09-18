@@ -28,14 +28,21 @@ def migrate_imports(content):
   """Updates import statements from TestNG to JUnit."""
   content_new = re.sub('org.testng.annotations.Test', 'org.junit.Test', content)
 
-  content_new = re.sub('org.testng.annotations.BeforeMethod;',
-                       'org.junit.Before;', content_new)
+  #Before
+  content_new = re.sub('org.testng.annotations.BeforeMethod',
+                       'org.junit.Before', content_new)
 
-  content_new = re.sub('org.testng.annotations.BeforeClass;',
-                       '''org.junit.Before;
-import org.junit.BeforeClass;''', content_new)
+  content_new = re.sub('org.testng.annotations.BeforeClass',
+                       'org.junit.Before', content_new)
 
+  content_new = re.sub('org.testng.annotations.BeforeTest',
+                       'org.junit.Before', content_new)
+
+  #After
   content_new = re.sub('org.testng.annotations.AfterMethod',
+                       'org.junit.After', content_new)
+
+  content_new = re.sub('org.testng.annotations.AfterClass',
                        'org.junit.After', content_new)
 
   content_new = re.sub('org.testng.annotations.AfterTest',
@@ -80,13 +87,14 @@ import com.google.inject.Injector;''', content_new)
 def migrate_testng_annotations(content):
   content_new = re.sub('@Test\npublic class', 'public class', content)
 
-  content_new = re.sub('@BeforeMethod', '@Before', content_new)
-
-  content_new = re.sub('@AfterMethod', '@After', content_new)
-
   # Use @Before/@After over @BeforeClass/@AfterClass since the latter requires the method to be static.
   # Most of our methods are more member friendly.
+  content_new = re.sub('@BeforeMethod', '@Before', content_new)
   content_new = re.sub('@BeforeClass', '@Before', content_new)
+  content_new = re.sub('@BeforeTest', '@Before', content_new)
+
+  content_new = re.sub('@AfterMethod', '@After', content_new)
+  content_new = re.sub('@AfterClass', '@After', content_new)
   content_new = re.sub('@AfterTest', '@After', content_new)
 
   if '@After' in content_new:
@@ -383,7 +391,7 @@ def migrate_tests(test_dir):
     test_files = []
     for path, dir, files in os.walk(test_dir):
         for file in files:
-            if file.endswith('Test.java'):
+            if file.endswith('.java'):
                 test_files.append(os.path.join(path, file))
 
     for file_name in test_files:
