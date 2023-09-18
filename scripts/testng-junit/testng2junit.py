@@ -32,9 +32,13 @@ def migrate_imports(content):
                        'org.junit.Before;', content_new)
 
   content_new = re.sub('org.testng.annotations.BeforeClass;',
-                       'org.junit.BeforeClass;', content_new)
+                       '''org.junit.Before;
+import org.junit.BeforeClass;''', content_new)
 
   content_new = re.sub('org.testng.annotations.AfterMethod',
+                       'org.junit.After', content_new)
+
+  content_new = re.sub('org.testng.annotations.AfterTest',
                        'org.junit.After', content_new)
 
   content_new = re.sub(
@@ -57,10 +61,11 @@ import com.google.inject.Injector;''', content_new)
 
 
   # clean up junit4 warnings that junit4 tests should not start with void test*.
-  content_new = re.sub('void test', 'void verify', content_new)
+  content_new = re.sub('public void test', 'public void verify', content_new)
 
 
   # migrate NullChecking*TestBase
+  content_new = re.sub('NullCheckingClassTestBase', 'NullCheckingClassJunitTestBase', content_new)
   content_new = re.sub('NullCheckingEnumTestBase', 'NullCheckingEnumJunitTestBase', content_new)
   content_new = re.sub('NullCheckingInstanceTestBase', 'NullCheckingInstanceJunitTestBase', content_new)
   content_new = re.sub('NullCheckingBuilderTestBase', 'NullCheckingBuilderJunitTestBase', content_new)
@@ -77,9 +82,12 @@ def migrate_testng_annotations(content):
 
   content_new = re.sub('@BeforeMethod', '@Before', content_new)
 
-  content_new = re.sub('@BeforeClass', '@Before', content_new)
-
   content_new = re.sub('@AfterMethod', '@After', content_new)
+
+  # Use @Before/@After over @BeforeClass/@AfterClass since the latter requires the method to be static.
+  # Most of our methods are more member friendly.
+  content_new = re.sub('@BeforeClass', '@Before', content_new)
+  content_new = re.sub('@AfterTest', '@After', content_new)
 
   if '@After' in content_new:
       content_iter = iter(content_new.split('\n'))
@@ -130,9 +138,9 @@ def migrate_data_providers(content):
                          content_new)
 
   # In JUnit data providers have to be public and static.
-  object_array_provider_regex = re.compile(r'public Object\[\]\[\] (.*)\(\)')
+  object_array_provider_regex = re.compile(r'(public|private) Object\[\]\[\] (.*)\(\)')
   content_new = object_array_provider_regex.sub(
-      'public static Object[][] \\1()', content_new)
+      'public static Object[][] \\2()', content_new)
 
   return content_new
 
@@ -363,10 +371,10 @@ def migrate_buck(buck_module):
     if os.path.isfile(buck_file):
         with open(buck_file, 'r') as f_in:
             content = f_in.read()
-            if 'junit' not in content:
+            if 'java_test_internal' in content and 'junit' not in content:
                 print('Converting ', buck_file)
-                content = re.sub('deps = DEPS \\+ TEST_DEPS,',
-                                 'deps = DEPS + TEST_DEPS,\n\ttest_type = "junit",', content)
+                content = re.sub(r'java_test_internal\(',
+                                 'java_test_internal(\n\ttest_type = "junit",', content)
                 with open(buck_file, 'w') as fn:
                     fn.write(content)
 
