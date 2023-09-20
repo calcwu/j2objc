@@ -106,9 +106,6 @@ def migrate_testng_annotations(content):
   content_new = re.sub('@Before\n  private', '@Before\n  public', content_new)
   content_new = re.sub(r'@Test\(enabled = false\)', '@Ignore @Test', content_new)
 
-  # clean up junit4 warnings that junit4 tests should not start with void test*.
-  content_new = re.sub('public void test', 'public void verify', content_new)
-
   return content_new
 
 
@@ -137,8 +134,6 @@ def migrate_data_providers(content):
     content_new = re.sub(tup[0], '"' + tup[1] + '"', content_new)
 
   content_new = re.sub('@DataProvider.*', '@DataProvider', content_new)
-
-  #content_new = re.sub('public final class', 'public class', content_new)
 
   if 'DataProvider' in content_new and '@RunWith(DataProviderRunner.class)' not in content_new:
     content_new = re.sub('public class',
