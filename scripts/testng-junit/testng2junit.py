@@ -284,7 +284,7 @@ private SomeServiceA serviceA;
 private SomeServiceB serviceB;
 """
 def migrate_inject_constructor(class_name, content):
-    if '@Inject' not in content:
+    if '@Inject' not in content or '@Test' not in content:
         return content
 
     # extract constructor arguments
