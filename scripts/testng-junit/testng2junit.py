@@ -28,13 +28,24 @@ def migrate_imports(content):
   """Updates import statements from TestNG to JUnit."""
   content_new = re.sub('org.testng.annotations.Test', 'org.junit.Test', content)
 
-  content_new = re.sub('org.testng.annotations.BeforeMethod;',
-                       'org.junit.Before;', content_new)
+  #Before
+  content_new = re.sub('org.testng.annotations.BeforeMethod',
+                       'org.junit.Before', content_new)
 
-  content_new = re.sub('org.testng.annotations.BeforeClass;',
-                       'org.junit.BeforeClass;', content_new)
+  content_new = re.sub('org.testng.annotations.BeforeClass',
+                       'org.junit.Before', content_new)
 
+  content_new = re.sub('org.testng.annotations.BeforeTest',
+                       'org.junit.Before', content_new)
+
+  #After
   content_new = re.sub('org.testng.annotations.AfterMethod',
+                       'org.junit.After', content_new)
+
+  content_new = re.sub('org.testng.annotations.AfterClass',
+                       'org.junit.After', content_new)
+
+  content_new = re.sub('org.testng.annotations.AfterTest',
                        'org.junit.After', content_new)
 
   content_new = re.sub(
@@ -55,12 +66,32 @@ import org.junit.runner.RunWith;''', content_new)
                        '''import com.google.inject.Guice;
 import com.google.inject.Injector;''', content_new)
 
+  # include @Ignore
+  if '@Test(enabled' in content_new:
+      content_new = re.sub('org.junit.Test;',
+                           '''org.junit.Test;
+import org.junit.Ignore;''', content_new)
 
-  # clean up junit4 warnings that junit4 tests should not start with void test*.
-  content_new = re.sub('void test', 'void verify', content_new)
+  return content_new
 
+
+def migrate_testng_annotations(content):
+  content_new = re.sub('@Test\npublic class', 'public class', content)
+  content_new = re.sub('@Guice\npublic class', 'public class', content_new)
+  content_new = re.sub('@Guice\npublic abstract class', 'public abstract class', content_new)
+
+  # Use @Before/@After over @BeforeClass/@AfterClass since the latter requires the method to be static.
+  # Most of our methods are more member friendly.
+  content_new = re.sub('@BeforeMethod', '@Before', content_new)
+  content_new = re.sub('@BeforeClass', '@Before', content_new)
+  content_new = re.sub('@BeforeTest', '@Before', content_new)
+
+  content_new = re.sub('@AfterMethod', '@After', content_new)
+  content_new = re.sub('@AfterClass', '@After', content_new)
+  content_new = re.sub('@AfterTest', '@After', content_new)
 
   # migrate NullChecking*TestBase
+  content_new = re.sub('NullCheckingClassTestBase', 'NullCheckingClassJunitTestBase', content_new)
   content_new = re.sub('NullCheckingEnumTestBase', 'NullCheckingEnumJunitTestBase', content_new)
   content_new = re.sub('NullCheckingInstanceTestBase', 'NullCheckingInstanceJunitTestBase', content_new)
   content_new = re.sub('NullCheckingBuilderTestBase', 'NullCheckingBuilderJunitTestBase', content_new)
@@ -68,30 +99,12 @@ import com.google.inject.Injector;''', content_new)
   # Migrate AbstractJerseyTestNG to AbstractJerseyJUnit
   content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
 
-
-  return content_new
-
-
-def migrate_testng_annotations(content):
-  content_new = re.sub('@Test\npublic class', 'public class', content)
-
-  content_new = re.sub('@BeforeMethod', '@Before', content_new)
-
-  content_new = re.sub('@BeforeClass', '@Before', content_new)
-
-  content_new = re.sub('@AfterMethod', '@After', content_new)
-
-  if '@After' in content_new:
-      content_iter = iter(content_new.split('\n'))
-      content_list = []
-      for line in content_iter:
-          content_list.append(line)
-          if '@After' in line:
-              line = next(content_iter)
-              line = re.sub('private void', 'public void', line)
-              content_list.append(line)
-
-      return '\n'.join(content_list)
+  # Ensure test methods are public
+  content_new = re.sub('@Test\n  void', '@Test\n  public void', content_new)
+  content_new = re.sub('@Test\n  private', '@Test\n  public', content_new)
+  content_new = re.sub('@After\n  private', '@After\n  public', content_new)
+  content_new = re.sub('@Before\n  private', '@Before\n  public', content_new)
+  content_new = re.sub(r'@Test\(enabled = false\)', '@Ignore @Test', content_new)
 
   return content_new
 
@@ -122,17 +135,15 @@ def migrate_data_providers(content):
 
   content_new = re.sub('@DataProvider.*', '@DataProvider', content_new)
 
-  content_new = re.sub('public final class', 'public class', content_new)
-
   if 'DataProvider' in content_new and '@RunWith(DataProviderRunner.class)' not in content_new:
     content_new = re.sub('public class',
                          '@RunWith(DataProviderRunner.class)\npublic class',
                          content_new)
 
   # In JUnit data providers have to be public and static.
-  object_array_provider_regex = re.compile(r'public Object\[\]\[\] (.*)\(\)')
+  object_array_provider_regex = re.compile(r'(public|private) Object\[\]\[\] (.*)\(\)')
   content_new = object_array_provider_regex.sub(
-      'public static Object[][] \\1()', content_new)
+      'public static Object[][] \\2()', content_new)
 
   return content_new
 
@@ -268,7 +279,7 @@ private SomeServiceA serviceA;
 private SomeServiceB serviceB;
 """
 def migrate_inject_constructor(class_name, content):
-    if '@Inject' not in content:
+    if '@Inject' not in content or '@Test' not in content:
         return content
 
     # extract constructor arguments
@@ -363,10 +374,10 @@ def migrate_buck(buck_module):
     if os.path.isfile(buck_file):
         with open(buck_file, 'r') as f_in:
             content = f_in.read()
-            if 'junit' not in content:
+            if 'java_test_internal' in content and 'junit' not in content:
                 print('Converting ', buck_file)
-                content = re.sub('deps = DEPS \\+ TEST_DEPS,',
-                                 'deps = DEPS + TEST_DEPS,\n\ttest_type = "junit",', content)
+                content = re.sub(r'java_test_internal\(',
+                                 'java_test_internal(\n\ttest_type = "junit",', content)
                 with open(buck_file, 'w') as fn:
                     fn.write(content)
 
@@ -375,7 +386,7 @@ def migrate_tests(test_dir):
     test_files = []
     for path, dir, files in os.walk(test_dir):
         for file in files:
-            if file.endswith('Test.java'):
+            if file.endswith('.java'):
                 test_files.append(os.path.join(path, file))
 
     for file_name in test_files:
