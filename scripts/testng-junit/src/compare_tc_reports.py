@@ -1,5 +1,6 @@
 import sys
 
+
 def main():
   if len(sys.argv) != 3:
     print('usage: compare_tests.py <master-tc-test-file> <branch-tc-test-file>')
@@ -18,20 +19,33 @@ def main():
     if master_count != branch_count:
       print("{} expected {}, but got {}".format(key, master_count, branch_count))
 
+
 def convert(file):
   data = {}
   with open(file) as f:
     lines = f.readlines()
+    passed_total = 0
+    skipped_total = 0
+    failed_total = 0
     for line in lines:
       line = line.strip()
       if 'Passed' in line and line.endswith('Test'):
-        tokens = line.strip().split(' ')
+        tokens = line.replace('  ', ' ').strip().split(' ')
         last = len(tokens) - 1
-        passed_count = tokens[last-12]
-        skipped_count = tokens[last-8]
-        failed_count = tokens[last-4]
+        passed_count = int(tokens[tokens.index('Passed')-1])
+        passed_total += passed_count
+
+        skipped_count = int(tokens[tokens.index('Skipped')-1])
+        skipped_total += skipped_count
+
+        failed_count = int(tokens[tokens.index('Failed')-1])
+        failed_total += failed_count
+
         test_name = tokens[last]
         data[test_name] = "P{}_S{}_F{}".format(passed_count, skipped_count, failed_count)
+
+  print('File: ', file)
+  print('Passed: ', passed_total, ' Skipped: ', skipped_total, ' Failed: ', failed_total)
 
   return data
 

@@ -1,0 +1,3 @@
+- set up python3 virtualenv
+- run `pytest` to run all the tests.
+- run `python $DIR/j2objc/scripts/testng-junit/src/testng2junit.py <module>` to run the migration

@@ -6,7 +6,7 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-SKIP_INFRA_LIB_MODULES=("bson" "kafka-manual-ack" "blobstore-s3" "messaging" "configutils" "crypto" "distributedlocks" "filemuncher" "grpc" "guice" "jersey" "jetty-filter" "jetty" "jooq" "jsonapi" "kafka-server" "kafka" "kryo" "lang" "logging" "maxwell" "mongo" "multistage" "parquet" "request" "rest" "secrets" "ssl" "syndicatedcache" "testing" "threads" "kafka-admin")
+SKIP_INFRA_LIB_MODULES=("bson" "kafka-manual-ack" "jooq" "logging" "maxwell" "mongo" "multistage" "parquet" "secrets" "ssl" "testing" "threads" "kafka-admin")
 script_dir=$(dirname $0)
 conversion_script="$script_dir/testng2junit.py"
 echo "conversion_script: $conversion_script"
