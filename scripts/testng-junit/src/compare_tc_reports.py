@@ -3,7 +3,7 @@ import sys
 
 def main():
   if len(sys.argv) != 3:
-    print('usage: compare_tests.py <master-tc-test-file> <branch-tc-test-file>')
+    print('usage: {} <master-tc-unit-test-logs> <branch-tc-unit-test-logs>'.format(sys.argv[0]))
     sys.exit(1)
 
   master_file = sys.argv[1]
