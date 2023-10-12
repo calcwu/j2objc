@@ -137,6 +137,8 @@ def migrate_testng_annotations(content):
 
   # Migrate AbstractJerseyTestNG to AbstractJerseyJUnit
   content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
+  if 'AbstractJerseyJUnit' in content_new:
+      content_new = re.sub('\s+(this.)?resetMocks\(\);', '', content_new)
 
   # Ensure test methods are public
   content_new = re.sub('@Test\n  void', '@Test\n  public void', content_new)
