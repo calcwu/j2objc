@@ -226,7 +226,7 @@ def migrate_exceptions(content):
   if 'expectedExceptionsMessageRegExp' not in content:
       return content_new
 
-  pattern = r'@Test\(expected\s*=\s*([^\)]+)\s*,\s*\n*expectedMessageRegExp\s*=\s*(.*?)\s*\)'
+  pattern = r'@Test\s*\(expected\s*=\s*([^\)]+)\s*,\s*\n*expectedMessageRegExp\s*=\s*(.*?)\s*\)'
   new_content = []
   content_iter = iter(content_new.split('\n'))
   for line in content_iter:
@@ -250,7 +250,7 @@ def migrate_exceptions(content):
         if '{' in line:
             # parse out method lines
             line = next(content_iter)
-            while '  }' != line:
+            while not line.startswith('  }'):
                 # 4 spaces.
                 method_body.append('    '+line)
                 line = next(content_iter)

@@ -27,7 +27,17 @@ content = """
     var offsetProvider = new DestinationOffsetProviderImpl(messagingAdmin, destination);
     offsetProvider.getLatestOffset();
   }
-  
+
+  @Test (expectedExceptions = IllegalArgumentException.class,
+      expectedExceptionsMessageRegExp = ".*encountered multiple partitions.*")
+  public void verifyMultiplePartitionsUnsupported() {
+    DestinationPartition dp1 = new DestinationPartition(
+        new Destination(TEST_ENVIRONMENT, "destination"), 0);
+    DestinationPartition dp2 = new DestinationPartition(
+        new Destination(TEST_ENVIRONMENT, "destination"), 1);
+    strategy.load("test.group", Type.PUBSUB, ImmutableSet.of(dp1, dp2));
+  }
+     
 """
 
 expected = """
@@ -66,7 +76,21 @@ expected = """
         ".*Timed out.*"
     );
   }
-    
+  
+  @Test
+  public void verifyMultiplePartitionsUnsupported() {
+    assertThrows(
+      () -> {
+        DestinationPartition dp1 = new DestinationPartition(
+            new Destination(TEST_ENVIRONMENT, "destination"), 0);
+        DestinationPartition dp2 = new DestinationPartition(
+            new Destination(TEST_ENVIRONMENT, "destination"), 1);
+        strategy.load("test.group", Type.PUBSUB, ImmutableSet.of(dp1, dp2));
+      },
+      IllegalArgumentException.class,
+      ".*encountered multiple partitions.*"
+    );
+  }    
 """
 
 
