@@ -86,8 +86,8 @@ import org.junit.runner.RunWith;''', content_new)
   content_new = re.sub('org.testng.AssertJUnit',
                        'org.junit.Assert', content_new)
 
-  content_new = re.sub('org.testng.Assert.assertThrows',
-                       'com.addepar.infra.library.lang.assertion.AssertionUtils.assertThrows', content_new)
+  content_new = re.sub('org.testng.Assert.(assert|expect)Throws',
+                       'com.addepar.infra.library.lang.assertion.Assert.assertThrows', content_new)
 
   # this forces @Guice annotation error, but it's needed for Guice.createInjector
   content_new = re.sub('import org.testng.annotations.Guice;',
@@ -115,13 +115,12 @@ import com.google.inject.Injector;''', content_new)
 
 def migrate_testng_annotations(content):
   content_new = re.sub('@Test\npublic class', 'public class', content)
-  content_new = re.sub('@Guice\npublic class', 'public class', content_new)
   content_new = re.sub('@Guice\npublic abstract class', 'public abstract class', content_new)
 
   # Use @Before/@After over @BeforeClass/@AfterClass since the latter requires the method to be static.
   # Most of our methods are more member friendly.
   content_new = re.sub('@BeforeSuite', '@Before', content_new)
-  content_new = re.sub('@BeforeMethod', '@Before', content_new)
+  content_new = re.sub('@BeforeMethod(\(alwaysRun\s+=\s+true\))?', '@Before', content_new)
   content_new = re.sub('@BeforeClass', '@Before', content_new)
   content_new = re.sub('@BeforeTest', '@Before', content_new)
 
@@ -288,6 +287,8 @@ def migrate_asserts(content):
   content_new = re.sub('org.testng.Assert',
                        'org.junit.Assert', content_new)
 
+  content_new = re.sub('expectThrows(?=\()','assertThrows', content_new)
+
   content_new = re.sub('org.junit.Assert.assertTrue',
       'com.addepar.infra.library.lang.assertion.Assert.assertTrue', content_new)
 
@@ -332,11 +333,13 @@ def migrate_guice_annotation(content):
     content_iter = iter(content.split('\n'))
     add_injected_member = False
     for line in content_iter:
-        # remove all the lines starting with @Guice(....)
+        # remove all the lines starting with @Guice(....) or @Guice
         if '@Guice' in line:
+            if '@Guice' == line.strip():
+                continue
             while ')' not in line:
                 # skip the next line too since this might span across multiple lines
-                next(content_iter)
+                line = next(content_iter)
             continue
 
         # handle insertion of injector
@@ -472,12 +475,15 @@ def replace_guice_module_with_injector(content):
         raise Exception("@Guice is expected")
 
     modules_regex = re.compile(
-        r'@Guice\(modules\s*=\s*\{?([^}\n]+)\}?\)')
+        r'@Guice\(modules\s*=\s*\{?([^{}]+)\}?\)')
     module_matches = re.findall(modules_regex, content)
     print("module_matches: ", module_matches)
 
     if not module_matches:
-        raise Exception("Cannot extract @Guice modules. Double check the regexp.")
+        if re.search('@Guice\s+', content):
+            return '\n  private final Injector injector = Guice.createInjector();'
+        else:
+            raise Exception("Cannot extract @Guice modules. Double check the regexp.")
 
     module_line = module_matches[0].split(',')
     modules = []
