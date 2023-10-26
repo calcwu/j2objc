@@ -44,7 +44,7 @@ throw_with_callable_template = '''    assertCallableThrows(
 
 before_inject_template = '''  @Before
   public void setup() {
-    injector.injectMembers(this);     
+    injector.injectMembers(this);
   }
 '''
 
@@ -113,6 +113,11 @@ import com.google.inject.Injector;''', content_new)
   return content_new
 
 
+def migrate_base_class(content):
+    content_new = re.sub('BaseJerseyTestNG', 'BaseJerseyJUnit', content)
+    return content_new
+
+
 def migrate_testng_annotations(content):
   content_new = re.sub('@Test\npublic class', 'public class', content)
   content_new = re.sub('@Guice\npublic abstract class', 'public abstract class', content_new)
@@ -163,6 +168,7 @@ def migrate_data_providers(content):
       return content
 
   content_new = re.sub(r'private Object\[\]\[\]', 'public Object[][]', content)
+  content_new = re.sub(r'private static Object\[\]\[\]', 'public static Object[][]', content_new)
   content_new = re.sub(r'\)\n  Object\[\]\[\]', ')\n  public Object[][]', content_new)
   data_provider_regex = re.compile(
       r'@DataProvider\(name\s*=\s*(.*)\)\s*public\s+Object\[\]\[\]\s+(\w+)\(\)')
@@ -513,11 +519,11 @@ def migrate_buck(buck_module):
             content = f_in.read()
             if 'java_test_internal' in content and 'test_type = "junit"' not in content:
                 content = re.sub(r'java_test_internal\(',
-                                 'java_test_internal(\n\ttest_type = "junit",', content)
+                                 'java_test_internal(\n    test_type = "junit",', content)
 
             if 'TEST_DEPS' in content and '//infra/library/lang:test_utils' not in content:
                 content = re.sub(r'TEST_DEPS = \[',
-                                 'TEST_DEPS = [\n\t"//infra/library/lang:test_utils",', content)
+                                 'TEST_DEPS = [\n    "//infra/library/lang:test_utils",', content)
 
             with open(buck_file, 'w') as fn_out:
                 fn_out.write(content)
@@ -539,6 +545,7 @@ def migrate_tests(test_dir):
             print("Converting ", file_name)
             content = f.read()
             content_new = migrate_imports(content)
+            content_new = migrate_base_class(content_new)
             content_new = migrate_testng_annotations(content_new)
             content_new = migrate_data_providers(content_new)
             content_new = migrate_guice_annotation(content_new)
