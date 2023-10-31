@@ -37,6 +37,13 @@ content = """
         new Destination(TEST_ENVIRONMENT, "destination"), 1);
     strategy.load("test.group", Type.PUBSUB, ImmutableSet.of(dp1, dp2));
   }
+  
+  @Test(
+      expectedExceptions = IllegalArgumentException.class,
+      expectedExceptionsMessageRegExp = "Invalid rate: .*")
+  public void testInvalidTier() {
+    new RateTierImpl(-1, -5.0, 0.0, 1.0);
+  }
      
 """
 
@@ -91,6 +98,17 @@ expected = """
       ".*encountered multiple partitions.*"
     );
   }    
+  
+  @Test
+  public void testInvalidTier() {
+    assertThrows(
+      () -> {
+        new RateTierImpl(-1, -5.0, 0.0, 1.0);
+      },
+      IllegalArgumentException.class,
+      "Invalid rate: .*"
+    );
+  }
 """
 
 

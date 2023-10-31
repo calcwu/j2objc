@@ -108,6 +108,12 @@ import com.google.inject.Injector;''', content_new)
   if '@Guice' in content_new and '@Before' not in content_new:
     imports.append('import org.junit.Before;')
 
+  # Listeners will be migrated to be junit rules
+  if '@Listeners' in content_new:
+      content_new = re.sub('import org.testng.annotations.Listeners;\n', '', content_new)
+      imports.append('import org.junit.Rule;')
+      imports.append('import org.junit.rules.TestRule;')
+
   content_new = re.sub('org.junit.Test;', '\n'.join(imports), content_new)
 
   return content_new
@@ -233,19 +239,25 @@ def migrate_exceptions(content):
   if 'expectedExceptionsMessageRegExp' not in content:
       return content_new
 
-  pattern = r'@Test\s*\(expected\s*=\s*([^\)]+)\s*,\s*\n*expectedMessageRegExp\s*=\s*(.*?)\s*\)'
+  pattern = r'@Test\s*\(\s*expected\s*=\s*([^\)]+)\s*,\s*\n*expectedMessageRegExp\s*=\s*(.*?)\s*\)'
   new_content = []
   content_iter = iter(content_new.split('\n'))
   for line in content_iter:
-    at_test_annotation_line = ''
     method_body = []
     method_signature = ''
-    if '@Test' in line and 'expected' in line\
-            and ('expectedMessageRegExp' in line or ')' not in line):
+    if '@Test' in line and '(' in line:
         at_test_annotation_line = line
         while ')' not in line:
             line = next(content_iter)
             at_test_annotation_line += line
+
+        matches = re.search(pattern, at_test_annotation_line)
+
+        if not matches:
+            new_content.append(at_test_annotation_line)
+            continue
+
+        print('expected exception + message matches:', matches)
 
         new_content.append('  @Test')
         # method line
@@ -262,8 +274,7 @@ def migrate_exceptions(content):
                 method_body.append('    '+line)
                 line = next(content_iter)
 
-        matches = re.search(pattern, at_test_annotation_line)
-        print('expected exception + message matches:', matches)
+
         if matches:
           expected_exceptions = matches.group(1).strip()
           message_regex = matches.group(2).strip()
@@ -386,9 +397,60 @@ def migrate_guice_annotation(content):
         if insert_idx:
             new_content.insert(insert_idx, before_inject_template)
 
-
     return '\n'.join(new_content)
 
+
+#
+# This replaces the following pattern
+#
+# @Listeners(TestRequestScopes.Listener.class)
+# public class SomeTest {
+#   ...
+# }
+#
+# ..... with .....
+#
+# public class SomeTest {
+#   @Rule public TestRule rule = TestRequestScopes.rule();
+#
+#   ...
+# }
+#
+def migrate_listeners(content):
+    if '@Listeners(' not in content:
+        return content
+
+    listener_match = re.compile(r'@Listeners\(\{?([^\)\}]+)\}?\)').findall(content)
+    if listener_match:
+        print("Listeners found: ", listener_match)
+        if len(set(listener_match)) > 1 or listener_match[0] != "TestRequestScopes.Listener.class":
+            raise Exception("Unsupported listener")
+
+    junit_rule_line = "\n  @Rule\n  public TestRule rule = TestRequestScopes.rule();"
+    new_content = []
+    content_iter = iter(content.split('\n'))
+    for line in content_iter:
+        if '@Listeners(' in line:
+            # Skip it
+            while ')' not in line:
+                # skip the next line too since this might span across multiple lines
+                line = next(content_iter)
+            continue
+
+        # handle insertion of junit rule
+        if 'public class' in line or 'public final class' in line:
+            new_content.append(line)
+
+            if '{' in line:
+                new_content.append(junit_rule_line)
+            else:
+                # inject injector after public class SomeClass {
+                insert_line_after_method(new_content, content_iter, junit_rule_line)
+
+            continue
+
+        new_content.append(line)
+    return '\n'.join(new_content)
 
 #
 # This replaces the following pattern
@@ -481,7 +543,7 @@ def replace_guice_module_with_injector(content):
         raise Exception("@Guice is expected")
 
     modules_regex = re.compile(
-        r'@Guice\(modules\s*=\s*\{?([^{}]+)\}?\)')
+        r'@Guice\(\s*modules\s*=\s*\{?([^{}]+)\}?\)')
     module_matches = re.findall(modules_regex, content)
     print("module_matches: ", module_matches)
 
@@ -549,6 +611,7 @@ def migrate_tests(test_dir):
             content_new = migrate_testng_annotations(content_new)
             content_new = migrate_data_providers(content_new)
             content_new = migrate_guice_annotation(content_new)
+            content_new = migrate_listeners(content_new)
             content_new = migrate_inject_constructor(extrac_class_name(file_name), content_new)
             content_new = migrate_exceptions(content_new)
             content_new = migrate_asserts(content_new)
