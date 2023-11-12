@@ -309,8 +309,14 @@ def migrate_asserts(content):
   content_new = re.sub('org.junit.Assert.assertTrue',
       'com.addepar.infra.library.lang.assertion.Assert.assertTrue', content_new)
 
+  content_new = re.sub('org.junit.Assert.assertFalse',
+                       'com.addepar.infra.library.lang.assertion.Assert.assertFalse', content_new)
+
   content_new = re.sub('org.junit.Assert.assertEquals',
       'com.addepar.infra.library.lang.assertion.Assert.assertEquals', content_new)
+
+  content_new = re.sub('org.junit.Assert.assertNotEquals',
+                       'com.addepar.infra.library.lang.assertion.Assert.assertNotEquals', content_new)
 
   return content_new
 
