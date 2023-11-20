@@ -633,7 +633,7 @@ def extrac_class_name(file):
 
 def main():
   if len(sys.argv) == 1:
-    print('usage: testng2junit.py <directory_to_migrate>')
+    print('usage: {} <directory_to_migrate>'.format(sys.argv[0]))
     sys.exit(1)
 
   buck_module = sys.argv[1]

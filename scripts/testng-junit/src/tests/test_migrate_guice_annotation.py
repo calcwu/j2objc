@@ -1,4 +1,4 @@
-from setup import testng2junit
+from setup import testng2junit4
 from setup import assert_equal_content
 
 
@@ -83,6 +83,6 @@ expected_3 = """
 
 
 def test_migrate_guice_annotation():
-    assert_equal_content(testng2junit.migrate_guice_annotation(content_1), expected_1)
-    assert_equal_content(testng2junit.migrate_guice_annotation(content_2), expected_2)
-    assert_equal_content(testng2junit.migrate_guice_annotation(content_3), expected_3)
+    assert_equal_content(testng2junit4.migrate_guice_annotation(content_1), expected_1)
+    assert_equal_content(testng2junit4.migrate_guice_annotation(content_2), expected_2)
+    assert_equal_content(testng2junit4.migrate_guice_annotation(content_3), expected_3)

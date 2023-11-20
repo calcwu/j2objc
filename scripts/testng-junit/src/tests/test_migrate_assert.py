@@ -1,4 +1,4 @@
-from setup import testng2junit
+from setup import testng2junit4
 
 content = """
 
@@ -10,5 +10,5 @@ content = """
 
 
 def test_migrate_assert():
-    content_new = testng2junit.migrate_asserts(content)
+    content_new = testng2junit4.migrate_asserts(content)
     assert 'assertNotNull("gffValidation", gffValidation);' in content_new

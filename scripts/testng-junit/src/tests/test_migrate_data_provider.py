@@ -1,4 +1,4 @@
-from setup import testng2junit
+from setup import testng2junit4
 from setup import assert_equal_content
 
 content = """
@@ -90,7 +90,7 @@ expected = """
 
 
 def test_migrate_data_providers():
-    content_new = testng2junit.migrate_data_providers(content)
+    content_new = testng2junit4.migrate_data_providers(content)
     assert_equal_content(content_new, expected)
 
 
