@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterAll;''', content_new)
 
     # Assert
     content_new = re.sub('org.junit.Assert', 'org.junit.jupiter.api.Assertions', content_new)
+    content_new = re.sub('org.testng.AssertJUnit', 'org.junit.jupiter.api.Assertions', content_new)
 
     return content_new
 
