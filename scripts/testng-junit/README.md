@@ -1,3 +1,4 @@
 - set up python3 virtualenv
 - run `pytest` to run all the tests.
+- run `pytest -s src/tests/test_45_migrate_assert.py` to run one test
 - run `python $DIR/j2objc/scripts/testng-junit/src/testng2junit.py <module>` to run the migration
