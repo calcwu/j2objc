@@ -1,21 +1,21 @@
-from setup import testng2junit4
+from setup import testng2junit5
 from setup import assert_equal_content
 
 content = """
 
   private final SomeServiceA serviceA;
-    
+
   private final SomeServiceB serviceB;
-    
+
   @Inject
   public SomeClass(SomeServiceA serviceA, SomeServiceB serviceB) {
     this.serviceA = serviceA;
     this.serviceB = serviceB;
   }
-  
+
   @Test
   public void runSomeTest() {
-  
+
   }
 
 """
@@ -37,5 +37,5 @@ expected = """
 
 
 def test_migrate_inject_constructor():
-    content_new = testng2junit4.migrate_inject_constructor('SomeClass', content)
+    content_new = testng2junit5.migrate_inject_constructor('SomeClass', content)
     assert_equal_content(content_new, expected)

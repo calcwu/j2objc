@@ -3,7 +3,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-import testng2junit4
+import testng2junit5
 import junit4_to_junit5
 
 

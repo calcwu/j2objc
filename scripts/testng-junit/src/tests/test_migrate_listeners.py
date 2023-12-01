@@ -1,4 +1,4 @@
-from setup import testng2junit4
+from setup import testng2junit5
 from setup import assert_equal_content
 
 content = '''
@@ -15,19 +15,15 @@ public class SomeTest
 
 expected = '''
 @Guice
+@ExtendWith(TestRequestScopeListener.class)
 public class SomeTest {
-
-  @Rule
-  public TestRule rule = TestRequestScopes.rule();
 }
 
+@ExtendWith({TestRequestScopeListener.class})
 public class SomeTest
 {
-
-  @Rule
-  public TestRule rule = TestRequestScopes.rule();
 }
 '''
 def test_migrate_listeners():
-    content_new = testng2junit4.migrate_listeners(content)
+    content_new = testng2junit5.migrate_listeners(content)
     assert_equal_content(content_new, expected)
