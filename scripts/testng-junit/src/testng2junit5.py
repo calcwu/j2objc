@@ -160,6 +160,10 @@ def migrate_testng_annotations(content):
 
   content_new = re.sub(r'@Test\(enabled = false\)', '@Disabled @Test', content_new)
 
+  # Ensure test methods are public
+  content_new = re.sub('@Test\n  void', '@Test\n  public void', content_new)
+  content_new = re.sub('@Test\n  private', '@Test\n  public', content_new)
+
   return content_new
 
 
