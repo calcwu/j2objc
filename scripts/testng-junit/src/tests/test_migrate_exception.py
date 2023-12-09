@@ -57,10 +57,10 @@ expected = """
   @Test
   public void testGetLast_failUnbounded() {
     assertThrows(
+      IllegalArgumentException.class,
       () -> {
         DateRangeUtil.getLast(UNBOUNDED_ABOVE);
       },
-      IllegalArgumentException.class,
       "no last date of range without upper bound: .*"
     );
   }
@@ -68,6 +68,7 @@ expected = """
   @Test
   public void throwsIfThereAreMultiplePartitions(){
     assertThrows(
+      IllegalStateException.class,
       () -> {
         when(messagingAdmin.hasDestinationBlocking(any())).thenReturn(true);
         when(messagingAdmin.getTopicPartitionInfo(any()))
@@ -75,21 +76,20 @@ expected = """
         var destination = MessagingTestUtils.createRandom();
         var offsetProvider = new DestinationOffsetProviderImpl(messagingAdmin, destination);
         offsetProvider.getLatestOffset();
-      },
-      IllegalStateException.class
+      }
     );
   }
 
   @Test
   public void throwsIfMessagingAdminCannotConnect() {
     assertThrows(
+      RuntimeException.class,
       () -> {
         when(messagingAdmin.connected()).thenReturn(new ManualResetEvent(false));
         var destination = MessagingTestUtils.createRandom();
         var offsetProvider = new DestinationOffsetProviderImpl(messagingAdmin, destination);
         offsetProvider.getLatestOffset();
       },
-      RuntimeException.class,
       ".*Timed out.*"
     );
   }
@@ -97,6 +97,7 @@ expected = """
   @Test
   public void verifyMultiplePartitionsUnsupported() {
     assertThrows(
+      IllegalArgumentException.class,
       () -> {
         DestinationPartition dp1 = new DestinationPartition(
             new Destination(TEST_ENVIRONMENT, "destination"), 0);
@@ -104,7 +105,6 @@ expected = """
             new Destination(TEST_ENVIRONMENT, "destination"), 1);
         strategy.load("test.group", Type.PUBSUB, ImmutableSet.of(dp1, dp2));
       },
-      IllegalArgumentException.class,
       ".*encountered multiple partitions.*"
     );
   }
@@ -112,10 +112,10 @@ expected = """
   @Test
   public void testInvalidTier() {
     assertThrows(
+      IllegalArgumentException.class,
       () -> {
         new RateTierImpl(-1, -5.0, 0.0, 1.0);
       },
-      IllegalArgumentException.class,
       "Invalid rate: .*"
     );
   }
@@ -123,10 +123,10 @@ expected = """
   @ParameterizedTest
   public void testParameteredTest() {
     assertThrows(
+      IllegalArgumentException.class,
       () -> {
         new RateTierImpl(-1, -5.0, 0.0, 1.0);
-      },
-      IllegalArgumentException.class
+      }
     );
   }
 """

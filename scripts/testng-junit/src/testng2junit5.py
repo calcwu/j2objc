@@ -24,35 +24,35 @@ import sys
 import re
 
 throw_template = '''    assertThrows(
+      %s,
       () -> {
 %s
       },
-      %s,
       %s
     );'''
 
 throw_template_no_message = '''    assertThrows(
-      () -> {
-%s
-      },
-      %s
-    );'''
-
-throw_with_callable_template = '''    assertCallableThrows(
-      () -> {
-%s
-        return null;
-      },
       %s,
-      %s
+      () -> {
+%s
+      }
     );'''
 
-throw_with_callable_template_no_message = '''    assertCallableThrows(
+throw_with_callable_template = '''    assertThrows(
+      %s,
       () -> {
 %s
         return null;
       },
       %s
+    );'''
+
+throw_with_callable_template_no_message = '''    assertThrows(
+      %s,
+      () -> {
+%s
+        return null;
+      }
     );'''
 
 
@@ -85,10 +85,10 @@ def migrate_imports(content):
                        'org.junit.jupiter.api.AfterEach', content_new)
 
   content_new = re.sub('org.testng.annotations.AfterClass',
-                       'org.junit.jupiter.api.AfterEach', content_new)
+                       'org.junit.jupiter.api.AfterAll', content_new)
 
   content_new = re.sub('org.testng.annotations.AfterTest',
-                       'org.junit.jupiter.api.AfterEach', content_new)
+                       'org.junit.jupiter.api.AfterAll', content_new)
 
   content_new = re.sub(
       'import org.testng.annotations.DataProvider;',
@@ -113,9 +113,8 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;''', content_new)
   if '@Test(enabled' in content_new:
       imports.append('import org.junit.jupiter.api.Disabled;')
 
-  if 'expectedExceptionsMessageRegExp' in content_new:
-    imports.append('import static com.addepar.infra.library.lang.assertion.AssertionUtils.assertThrows;')
-    imports.append('import static com.addepar.infra.library.lang.assertion.Assert.assertCallableThrows;')
+  if 'expectedExceptionsMessageRegExp' in content_new or 'expectedExceptions' in content_new:
+    imports.append('import static org.junit.jupiter.api.Assertions.assertThrows;')
 
   # if we have @Guice, we also need @BeforeAll imports to support before_inject_template.
   # refer to migrate_guice_annotation
@@ -273,10 +272,10 @@ def migrate_exceptions(content):
         if matches.group(4):
           message_regex = matches.group(4).strip()
           method_template = throw_with_callable_template if 'throws ' in method_signature else throw_template
-          method_body_value = method_template % ('\n'.join(method_body), expected_exceptions, message_regex)
+          method_body_value = method_template % (expected_exceptions, '\n'.join(method_body), message_regex)
         else:
           method_template = throw_with_callable_template_no_message if 'throws ' in method_signature else throw_template_no_message
-          method_body_value = method_template % ('\n'.join(method_body), expected_exceptions)
+          method_body_value = method_template % (expected_exceptions, '\n'.join(method_body))
         new_content.append(method_body_value)
 
     new_content.append(line)
