@@ -15,11 +15,20 @@ def migrate_imports(content):
     content_new = re.sub('org.junit.Test', 'org.junit.jupiter.api.Test', content)
 
     # Before
+    content_new = re.sub('org.junit.BeforeClass',
+                         'org.junit.jupiter.api.BeforeAll', content_new)
+
+    content_new = re.sub('org.junit.BeforeMethod',
+                         'org.junit.jupiter.api.BeforeEach', content_new)
+
     content_new = re.sub('import org.junit.Before;',
                          '''import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;''', content_new)
 
     # After
+    content_new = re.sub('org.junit.AfterClass',
+                         'org.junit.jupiter.api.AfterAll', content_new)
+
     content_new = re.sub('import org.junit.After;',
                          '''import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;''', content_new)
@@ -35,12 +44,15 @@ def migrate_annotations(content):
     content_new = content
 
     content_new = re.sub('@BeforeClass', '@BeforeAll', content_new)
+    content_new = re.sub('@BeforeMethod', '@BeforeEach', content_new)
 
     if '@BeforeEach' not in content_new:
         content_new = re.sub(r'@Before(?!\s*All)', '@BeforeEach', content_new)
 
     content_new = re.sub('@AfterMethod', '@AfterEach', content_new)
 
+
+    content_new = re.sub('@AfterClass', '@AfterAll', content_new)
     if '@AfterEach' not in content_new:
         content_new = re.sub(r'@After(?!\s*All)', '@AfterEach', content_new)
 
@@ -164,6 +176,16 @@ def migrate_asserts(content):
         pattern = re.compile(r'assertTrue\((".*?")\s*,\s*(.*?)\);')
         content_new = re.sub(pattern, r'assertTrue(\2, \1);', content_new)
 
+
+    content_new = re.sub('com.addepar.infra.library.lang.assertion.Assertions.assertEquals',
+                         'org.junit.jupiter.api.Assertions.assertEquals', content_new)
+
+    content_new = re.sub('com.addepar.infra.library.lang.assertion.Assert;',
+                         'org.junit.jupiter.api.Assertions;', content_new)
+
+    content_new = re.sub('    Assert.assert', '    Assertions.assert', content_new)
+
+
     return content_new
 
 
@@ -205,11 +227,11 @@ def migrate_tests(test_dir):
             content = f.read()
             content_new = migrate_imports(content)
             content_new = migrate_annotations(content_new)
+            content_new = migrate_data_provider(content_new)
             content_new = migrate_mockito_rule_annotation(content_new)
             content_new = migrate_guice_injector(content_new)
             content_new = migrate_exceptions(content_new)
             content_new = migrate_asserts(content_new)
-            content_new = migrate_data_provider(content_new)
             with open(file_name, 'w') as fn:
                 fn.write(content_new)
 
