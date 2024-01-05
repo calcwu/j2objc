@@ -13,6 +13,8 @@ throw_template = '''    assertThrows(
 def migrate_imports(content):
     """Updates import statements from TestNG to JUnit."""
     content_new = re.sub('org.junit.Test', 'org.junit.jupiter.api.Test', content)
+    content_new = re.sub('org.testng.annotations.Test', 'org.junit.jupiter.api.Test', content_new)
+
 
     # Before
     content_new = re.sub('org.junit.BeforeClass',
@@ -20,6 +22,10 @@ def migrate_imports(content):
 
     content_new = re.sub('org.junit.BeforeMethod',
                          'org.junit.jupiter.api.BeforeEach', content_new)
+
+    content_new = re.sub('org.testng.annotations.BeforeMethod',
+                         'org.junit.jupiter.api.BeforeEach', content_new)
+
 
     content_new = re.sub('import org.junit.Before;',
                          '''import org.junit.jupiter.api.BeforeEach;
@@ -65,16 +71,21 @@ def migrate_annotations(content):
 
 
 def migrate_mockito_rule_annotation(content):
-    if 'MockitoRule' not in content:
+
+    if 'MockitoExtension' in content or '@Mock' not in content:
         return content
 
     content_new = re.sub(
-      'import org.mockito.junit.MockitoRule;',
-      'import org.junit.jupiter.api.extension.ExtendWith;\nimport org.mockito.junit.jupiter.MockitoExtension;', content)
+      'import org.mockito.Mock;',
+      '''import org.mockito.Mock;
+import org.junit.jupiter.api.extension.ExtendWith;      
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+''', content)
 
-    content_new = re.sub('public class', '@ExtendWith(MockitoExtension.class)\npublic class', content_new)
-    pattern = re.compile(r'^\s*@Rule\s+public\s+MockitoRule\s+rule\s*=\s*.*$', re.MULTILINE)
-    content_new = re.sub(pattern, '', content_new)
+    content_new = re.sub('public class', '@ExtendWith(MockitoExtension.class)\n'
+                                         '@MockitoSettings(strictness = Strictness.LENIENT)\npublic class', content_new)
     return content_new
 
 
@@ -180,11 +191,24 @@ def migrate_asserts(content):
     content_new = re.sub('com.addepar.infra.library.lang.assertion.Assertions.assertEquals',
                          'org.junit.jupiter.api.Assertions.assertEquals', content_new)
 
+    content_new = re.sub('com.addepar.infra.library.lang.assertion.Assert.assertEquals',
+                         'org.junit.jupiter.api.Assertions.assertEquals', content_new)
+
+    content_new = re.sub('com.addepar.infra.library.lang.assertion.Assert.assertTrue',
+                         'org.junit.jupiter.api.Assertions.assertTrue', content_new)
+
+    content_new = re.sub('com.addepar.infra.library.lang.assertion.Assert.assertFalse',
+                         'org.junit.jupiter.api.Assertions.assertFalse', content_new)
+
     content_new = re.sub('com.addepar.infra.library.lang.assertion.Assert;',
                          'org.junit.jupiter.api.Assertions;', content_new)
 
-    content_new = re.sub('    Assert.assert', '    Assertions.assert', content_new)
+    content_new = re.sub('org.testng.Assert',
+                         'org.junit.jupiter.api.Assertions', content_new)
 
+    content_new = re.sub('    Assert.assert', '    Assertions.assert', content_new)
+    content_new = re.sub('Assert.fail', 'Assertions.fail', content_new)
+    content_new = re.sub('Assert.assertEquals', 'Assertions.assertEquals', content_new)
 
     return content_new
 
