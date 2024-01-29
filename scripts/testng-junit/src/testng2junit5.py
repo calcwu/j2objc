@@ -147,6 +147,13 @@ def migrate_testng_annotations(content):
   content_new = re.sub('@BeforeClass', '@BeforeAll', content_new)
   content_new = re.sub('@BeforeTest', '@BeforeAll', content_new)
 
+  # the `alwaysRun` parameter is not supported in JUnit
+  content_new = re.sub(
+      '(@AfterMethod|@AfterClass|@AfterTest)(\(alwaysRun(\s*)=(\s*)+true\))?',
+      '\\1',
+      content_new
+  )
+
   content_new = re.sub('@AfterMethod', '@AfterEach', content_new)
   content_new = re.sub('@AfterClass', '@AfterAll', content_new)
   content_new = re.sub('@AfterTest', '@AfterAll', content_new)

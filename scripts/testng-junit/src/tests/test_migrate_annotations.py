@@ -31,3 +31,24 @@ public static void alpha() {
 }
 """
     assert migrated == expected
+
+def test_after_each_always_run():
+    original = """
+@AfterMethod(alwaysRun = true)
+"""
+    expected = """
+@AfterEach
+"""
+    actual = testng2junit5.migrate_testng_annotations(original)
+    assert expected == actual
+
+
+def test_after_each_always_run_no_whitespace():
+    original = """
+@AfterMethod(alwaysRun=true)
+"""
+    expected = """
+@AfterEach
+"""
+    actual = testng2junit5.migrate_testng_annotations(original)
+    assert expected == actual
