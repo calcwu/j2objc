@@ -161,7 +161,7 @@ def migrate_testng_annotations(content):
   content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
   content_new = re.sub('BaseJerseyTestNG', 'BaseJerseyJUnit', content_new)
 
-  content_new = re.sub(r'@Test\(enabled = false\)', '@Disabled @Test', content_new)
+  content_new = re.sub(r'@Test\(enabled(\s*)=(\s*)false\)', '@Disabled @Test', content_new)
 
   # Ensure test methods are public
   content_new = re.sub('@Test\n  void', '@Test\n  public void', content_new)
