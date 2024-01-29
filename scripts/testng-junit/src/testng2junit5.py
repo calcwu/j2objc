@@ -290,7 +290,7 @@ def migrate_asserts(content):
   # message, obj1, obj2.
 
   #replace assertNotNull
-  pattern = r'assertNotNull\(([^,]+),\s*"([^"]+)"\);'
+  pattern = r'assertNotNull\(([^;,]+),\s*"([^"]+)"\);'
 
   # Use re.sub() to replace the pattern with the desired format
   content_new = re.sub(pattern, r'assertNotNull("\2", \1);', content)
