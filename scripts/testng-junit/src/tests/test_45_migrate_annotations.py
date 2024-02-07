@@ -21,5 +21,4 @@ expected = """
 
 def test_migrate_assert():
     content_new = junit4_to_junit5.migrate_annotations(content)
-    print(content_new)
     assert_equal_content(content_new, expected)
