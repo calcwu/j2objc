@@ -175,7 +175,7 @@ def migrate_mockito_rule_annotation(content):
     content_new = re.sub(
       'import org.mockito.Mock;',
       '''import org.mockito.Mock;
-import org.junit.jupiter.api.extension.ExtendWith;      
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -193,7 +193,7 @@ def migrate_data_providers(content):
 
     '''
     Make a list of tuples mapping the new name to original name.
-    
+
     @DataProvider(name="MillisInstantNoNanos")
     Object[][] provider_factory_millis_long() {
     '''
@@ -207,7 +207,7 @@ def migrate_data_providers(content):
 
     '''
     Set up test function annotations to
-    
+
     @ParameterizedTest
     @MethodSource("MillisInstantNoNanos")
     '''
@@ -250,7 +250,7 @@ def migrate_exceptions(content):
     if 'expectedExceptions' in content:
         content_new = re.sub('expectedExceptions', 'expected', content)
 
-    if 'expected' not in content:
+    if 'expected =' not in content:
         return content_new
 
     pattern = r'(@Test|@ParameterizedTest)\s*\(\s*expected\s*=\s*([^\)\,]+)\s*(,\s*\n*expectedMessageRegExp\s*=\s*(.*?)\s*)?\)'
@@ -322,16 +322,16 @@ def migrate_asserts(content):
     content_new = re.sub(r'expectThrows(?=\()', 'assertThrows', content_new)
 
     content_new = re.sub('org.junit.Assert.assertTrue',
-                         'com.addepar.infra.library.lang.assertion.Assert.assertTrue', content_new)
+                         'org.junit.jupiter.api.Assertions.assertTrue', content_new)
 
     content_new = re.sub('org.junit.Assert.assertFalse',
-                         'com.addepar.infra.library.lang.assertion.Assert.assertFalse', content_new)
+                         'org.junit.jupiter.api.Assertions.assertFalse', content_new)
 
     content_new = re.sub('org.junit.Assert.assertEquals',
-                         'com.addepar.infra.library.lang.assertion.Assert.assertEquals', content_new)
+                         'org.junit.jupiter.api.Assertions.assertEquals', content_new)
 
     content_new = re.sub('org.junit.Assert.assertNotEquals',
-                         'com.addepar.infra.library.lang.assertion.Assert.assertNotEquals', content_new)
+                         'org.junit.jupiter.api.Assertions.assertNotEquals', content_new)
 
     return content_new
 
