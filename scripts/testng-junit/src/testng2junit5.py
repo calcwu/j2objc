@@ -198,7 +198,7 @@ def migrate_data_providers(content):
     Object[][] provider_factory_millis_long() {
     '''
     data_provider_regex = re.compile(
-      r'@DataProvider\(name\s*=\s*(.*)\)\s*.*Object\[\]\[\]\s+(\w+)\(\)')
+      r'@DataProvider\(name\s*=\s*(.*)\)\s*(public|private)?\s+(static)?\s*(.*)\s+(\w+)\(\)')
     data_provider_rename_tuples = re.findall(data_provider_regex, content)
     print('data_provider_rename_tuples: ', data_provider_rename_tuples)
 
@@ -219,7 +219,10 @@ def migrate_data_providers(content):
 
     # Use provider function name in @MethodSource
     for tup in data_provider_rename_tuples:
-        content_new = re.sub(r"@MethodSource\({}\)".format(tup[0]), "@MethodSource(\"{}\")".format(tup[1]), content_new)
+        # MethodSource needs to be static
+        if not tup[2]:
+            content_new = re.sub(re.escape(f"{tup[3]} {tup[4]}"), f"static {tup[3]} {tup[4]}", content_new)
+        content_new = re.sub(r"@MethodSource\({}\)".format(tup[0]), "@MethodSource(\"{}\")".format(tup[4]), content_new)
 
     return content_new
 

@@ -44,7 +44,7 @@ content = """
 """
 
 expected = """
-  public Object[][] provideBadCharNames() {
+  public static Object[][] provideBadCharNames() {
     return new Object[][]{
         {""},
         {"hello!world"}
@@ -64,14 +64,14 @@ expected = """
         EqualityUtils.isDoubleZero(val), is(expected));
   }
 
-  public Object[][] getArgs() {
+  public static Object[][] getArgs() {
     return new Object[][] {
         {0d, true, true, true},
         {1E-2, false, false, false}
     };
   }
 
-  Object[][] providesAdiaHosts() throws URISyntaxException {
+  static Object[][] providesAdiaHosts() throws URISyntaxException {
     return new Object[][] {
         {new URI("https://adia1.prod.addepar.com")},
         {new URI("https://adia1:4447")}
