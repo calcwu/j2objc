@@ -142,7 +142,7 @@ def migrate_testng_annotations(content):
     content_new = re.sub('@BeforeTest', '@BeforeAll', content_new)
 
     # the `alwaysRun` parameter is not supported in JUnit
-    content_new = re.sub('(@AfterMethod|@AfterClass|@AfterTest)(\(alwaysRun(\s*)=(\s*)+true\))?', '\\1', content_new)
+    content_new = re.sub('(@AfterMethod|@AfterClass|@AfterTest|@BeforeAll)(\(alwaysRun(\s*)=(\s*)+true\))?', '\\1', content_new)
 
     content_new = re.sub('@AfterMethod', '@AfterEach', content_new)
     content_new = re.sub('@AfterClass', '@AfterAll', content_new)
@@ -253,7 +253,7 @@ def migrate_exceptions(content):
     if 'expectedExceptions' in content:
         content_new = re.sub('expectedExceptions', 'expected', content)
 
-    if 'expected =' not in content:
+    if 'expected =' not in content_new:
         return content_new
 
     pattern = r'(@Test|@ParameterizedTest)\s*\(\s*expected\s*=\s*([^\)\,]+)\s*(,\s*\n*expectedMessageRegExp\s*=\s*(.*?)\s*)?\)'
