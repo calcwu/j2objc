@@ -1,3 +1,12 @@
+#!/usr/bin/python3
+#
+#
+# This file is used for converting from junit4 to junit 5 only.
+#
+# It's no longer applicable. Use testng2junit5.py for testng --> junit5 conversion.
+#
+#
+
 import os
 import sys
 import re
