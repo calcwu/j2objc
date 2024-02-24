@@ -135,9 +135,9 @@ def migrate_testng_annotations(content):
     content_new = re.sub('@BeforeSuite', '@BeforeAll', content_new)
     content_new = re.sub(r'@BeforeMethod(\(alwaysRun\s+=\s+true\))?', '@BeforeEach', content_new)
 
-    # enforce static behavior for BeforeAll
-    content_new = re.sub(r'@BeforeClass\n(\s*)(public|private|protected)(.)*void', r'@BeforeAll\n\1\2 static void', content_new)
-    content_new = re.sub(r'@BeforeTest\n(\s*)(public|private|protected)(.)*void', r'@BeforeAll\n\1\2 static void', content_new)
+    # beforeAll
+    content_new = re.sub(r'@BeforeClass\n(\s*)(public|private|protected)(.)*void', r'@BeforeAll\n\1\2 void', content_new)
+    content_new = re.sub(r'@BeforeTest\n(\s*)(public|private|protected)(.)*void', r'@BeforeAll\n\1\2 void', content_new)
     content_new = re.sub('@BeforeClass', '@BeforeAll', content_new)
     content_new = re.sub('@BeforeTest', '@BeforeAll', content_new)
 

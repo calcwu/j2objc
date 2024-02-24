@@ -10,7 +10,7 @@ public void alpha() {
     migrated = testng2junit5.migrate_testng_annotations(original)
     expected = """
 @BeforeAll
-public static void alpha() {
+public void alpha() {
     beta();
 }
 """
@@ -26,7 +26,7 @@ public static void alpha() {
     migrated = testng2junit5.migrate_testng_annotations(original)
     expected = """
 @BeforeAll
-public static void alpha() {
+public void alpha() {
     beta();
 }
 """
