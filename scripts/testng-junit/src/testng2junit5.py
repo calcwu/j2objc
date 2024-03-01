@@ -42,7 +42,6 @@ throw_with_callable_template = '''    assertThrows(
       %s,
       () -> {
 %s
-        return null;
       },
       %s
     );'''
@@ -51,7 +50,6 @@ throw_with_callable_template_no_message = '''    assertThrows(
       %s,
       () -> {
 %s
-        return null;
       }
     );'''
 
@@ -104,7 +102,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;''', content_new)
 
     # include @Disabled
     imports = ['org.junit.jupiter.api.Test;']
-    if '@Test(enabled' in content_new:
+    if re.compile(r'@Test\s?\(enabled').search(content_new):
         imports.append('import org.junit.jupiter.api.Disabled;')
 
     if 'expectedExceptionsMessageRegExp' in content_new or 'expectedExceptions' in content_new:
@@ -158,7 +156,7 @@ def migrate_testng_annotations(content):
     content_new = re.sub('AbstractJerseyTestNG', 'AbstractJerseyJUnit', content_new)
     content_new = re.sub('BaseJerseyTestNG', 'BaseJerseyJUnit', content_new)
 
-    content_new = re.sub(r'@Test\(enabled(\s*)=(\s*)false\)', '@Disabled @Test', content_new)
+    content_new = re.sub(r'@Test\s?\(enabled(\s*)=(\s*)false\)', '@Disabled @Test', content_new)
 
     # Ensure test methods are public
     content_new = re.sub('@Test\n  void', '@Test\n  public void', content_new)
@@ -335,6 +333,9 @@ def migrate_asserts(content):
 
     content_new = re.sub('org.junit.Assert.assertNotEquals',
                          'org.junit.jupiter.api.Assertions.assertNotEquals', content_new)
+
+    content_new = re.sub('org.junit.Assert.assertArrayEquals',
+                         'org.junit.jupiter.api.Assertions.assertArrayEquals', content_new)
 
     return content_new
 
