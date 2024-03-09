@@ -337,6 +337,14 @@ def migrate_asserts(content):
     content_new = re.sub('org.junit.Assert.assertArrayEquals',
                          'org.junit.jupiter.api.Assertions.assertArrayEquals', content_new)
 
+    content_new = re.sub(' AssertJUnit.', ' ', content_new)
+
+    content_new = re.sub(r'assertEquals\((\".*\"),\s*\n*\s*(.*),\s*(.*)\)',
+                         'assertEquals(\\2, \\3, \\1)', content_new)
+
+    content_new = re.sub(r'assertNotSame\((\".*\"),\s*\n*\s*(.*),\s*(.*)\)',
+                         'assertNotSame(\\2, \\3, \\1)', content_new)
+
     return content_new
 
 
@@ -607,7 +615,7 @@ def migrate_tests(test_dir):
             content = f.read()
             content_new = migrate_imports(content)
             content_new = migrate_testng_annotations(content_new)
-            content_new = migrate_mockito_rule_annotation(content_new)
+            #content_new = migrate_mockito_rule_annotation(content_new)
             content_new = migrate_data_providers(content_new)
             content_new = migrate_guice_annotation(content_new)
             content_new = migrate_listeners(content_new)
