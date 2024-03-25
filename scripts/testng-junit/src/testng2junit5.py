@@ -72,7 +72,10 @@ def migrate_imports(content):
     content_new = re.sub('org.testng.annotations.BeforeMethod',
                          'org.junit.jupiter.api.BeforeEach', content_new)
 
-    content_new = re.sub('org.testng.annotations.BeforeClass', 'org.junit.jupiter.api.BeforeAll', content_new)
+    content_new = re.sub('org.testng.annotations.BeforeClass',
+                         '''org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;''', content_new)
 
     content_new = re.sub('org.testng.annotations.BeforeTest', 'org.junit.jupiter.api.BeforeAll', content_new)
 
@@ -113,6 +116,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;''', content_new)
     if '@Guice' in content_new and '@BeforeAll' not in content_new:
         imports.append('import org.junit.jupiter.api.BeforeAll;')
 
+
     # Listeners will be migrated to be junit @ExtendWith
     if '@Listeners' in content_new:
         content_new = re.sub('import org.testng.annotations.Listeners;\n', '', content_new)
@@ -130,10 +134,13 @@ def migrate_testng_annotations(content):
 
     # Use @Before/@After over @BeforeClass/@AfterClass since the latter requires the method to be static.
     # Most of our methods are more member friendly.
-    content_new = re.sub('@BeforeSuite', '@BeforeAll', content_new)
-    content_new = re.sub(r'@BeforeMethod(\(alwaysRun\s+=\s+true\))?', '@BeforeEach', content_new)
+    content_new = re.sub(r'@BeforeMethod\s+(public|protected|private)', r'@BeforeEach\n  public', content_new)
+    content_new = re.sub(r'@BeforeEach(\(alwaysRun\s+=\s+true\))?', '@BeforeEach', content_new)
+
+    content_new = re.sub(r'@AfterMethod\s+(public|protected|private)', r'@AfterEach\n  public', content_new)
 
     # beforeAll
+    content_new = re.sub('@BeforeSuite', '@BeforeAll', content_new)
     content_new = re.sub(r'@BeforeClass\n(\s*)(public|private|protected)(.)*void', r'@BeforeAll\n\1\2 void', content_new)
     content_new = re.sub(r'@BeforeTest\n(\s*)(public|private|protected)(.)*void', r'@BeforeAll\n\1\2 void', content_new)
     content_new = re.sub('@BeforeClass', '@BeforeAll', content_new)
@@ -362,6 +369,7 @@ def migrate_asserts(content):
 #
 # ..... with .....
 #
+# @TestInstance(Lifecycle.PER_CLASS)
 # public class SomeTest {
 #
 #   private final Injector injector = Guice.createInjector(new SomeModule());
@@ -434,6 +442,21 @@ def migrate_guice_annotation(content):
             new_content.insert(insert_idx, before_inject_template)
 
     return '\n'.join(new_content)
+
+
+def migrate_test_instance(content):
+    if '@BeforeAll' not in content:
+        return content
+
+    if '@TestInstance(Lifecycle.PER_CLASS)' in content:
+        return content
+
+    # add TestInstance to class level
+    content_new = content
+    if '@BeforeAll' in content:
+        content_new = re.sub(r'public final class', '@TestInstance(Lifecycle.PER_CLASS)\npublic final class', content)
+
+    return content_new
 
 
 #
@@ -615,13 +638,14 @@ def migrate_tests(test_dir):
             content = f.read()
             content_new = migrate_imports(content)
             content_new = migrate_testng_annotations(content_new)
-            #content_new = migrate_mockito_rule_annotation(content_new)
+            # content_new = migrate_mockito_rule_annotation(content_new)
             content_new = migrate_data_providers(content_new)
             content_new = migrate_guice_annotation(content_new)
             content_new = migrate_listeners(content_new)
             content_new = migrate_inject_constructor(extrac_class_name(file_name), content_new)
             content_new = migrate_exceptions(content_new)
             content_new = migrate_asserts(content_new)
+            content_new = migrate_test_instance(content_new)
             with open(file_name, 'w') as fn:
                 fn.write(content_new)
 
