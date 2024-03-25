@@ -125,6 +125,9 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;''', content_new)
 
     content_new = re.sub('org.junit.jupiter.api.Test;', '\n'.join(imports), content_new)
 
+    # replace other random imports
+    content_new = re.sub('org.testng.FileAssert.fail', 'org.junit.jupiter.api.Assertions.fail', content_new)
+
     return content_new
 
 
@@ -351,6 +354,8 @@ def migrate_asserts(content):
 
     content_new = re.sub(r'assertNotSame\((\".*\"),\s*\n*\s*(.*),\s*(.*)\)',
                          'assertNotSame(\\2, \\3, \\1)', content_new)
+
+    content_new = re.sub('Assert.assertThrows', 'Assertions.assertThrows', content_new)
 
     return content_new
 
