@@ -232,6 +232,8 @@ def migrate_data_providers(content):
             content_new = re.sub(re.escape(f"{tup[3]} {tup[4]}"), f"static {tup[3]} {tup[4]}", content_new)
         content_new = re.sub(r"@MethodSource\({}\)".format(tup[0]), "@MethodSource(\"{}\")".format(tup[4]), content_new)
 
+    content_new = re.sub(r'public Object\[\]\[\]', 'public static Object[][]', content_new)
+
     return content_new
 
 
